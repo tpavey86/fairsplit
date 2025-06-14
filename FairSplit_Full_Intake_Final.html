@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fair Split – Intake Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9fbfc; }
+    h1, h2 { color: #2c3e50; }
+    label { display: block; margin: 15px 0 5px; }
+    input, select, textarea {
+      width: 100%; padding: 10px; font-size: 1rem;
+      border: 1px solid #ccc; border-radius: 6px;
+    }
+    button {
+      margin-top: 20px; padding: 12px;
+      font-size: 1rem; border: none; border-radius: 6px;
+      background-color: #4a90e2; color: white; cursor: pointer;
+    }
+    button:hover { background-color: #357ab7; }
+    .output {
+      margin-top: 30px; padding: 15px; background: #ffffff;
+      border: 1px solid #ccd; border-radius: 6px; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fair Split – Start Your Form</h1>
+  <form id="intakeForm">
+    <h2>1. What You Want</h2>
+    <label>What outcome would you like?
+      <textarea name="desired_outcome" rows="4" placeholder="e.g. I would like to keep the house and share custody of the children."></textarea>
+    </label>
+    <label>Are you open to negotiation or mediation?
+      <select name="open_to_negotiation">
+        <option value="">-- Please choose --</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+        <option value="not_sure">Not sure</option>
+      </select>
+    </label>
+
+    <h2>2. Income</h2>
+    <label>Your monthly income (after tax):
+      <input type="text" name="your_income" placeholder="e.g. £1,800" />
+    </label>
+    <label>Their monthly income (if known):
+      <input type="text" name="their_income" placeholder="e.g. £2,200" />
+    </label>
+
+    <h2>3. Property & Assets</h2>
+    <label>Do you jointly own a property?
+      <select name="joint_property">
+        <option value="">-- Please choose --</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+    <label>Estimated property value:
+      <input type="text" name="property_value" placeholder="e.g. £250,000" />
+    </label>
+    <label>Do you have savings or pensions to consider?
+      <textarea name="savings_pensions" rows="3" placeholder="Briefly describe savings, pensions or other major assets."></textarea>
+    </label>
+
+    <h2>4. Children</h2>
+    <label>Number of children under 18:
+      <input type="number" name="children_count" min="0" />
+    </label>
+    <label>Living arrangements now:
+      <textarea name="living_arrangements" rows="3" placeholder="e.g. Children stay with me Mon-Fri, with the other parent on weekends."></textarea>
+    </label>
+
+    <h2>5. Debts</h2>
+    <label>Are there any shared or personal debts?
+      <textarea name="debts" rows="3" placeholder="e.g. Joint credit card, personal loans, mortgage debt."></textarea>
+    </label>
+
+    <h2>6. Anything else</h2>
+    <label>Other relevant information:
+      <textarea name="other_info" rows="4" placeholder="e.g. History of abuse, controlling behaviour, or disability care responsibilities."></textarea>
+    </label>
+
+    <h2>7. Consent</h2>
+    <label>
+      <input type="checkbox" name="consent" required>
+      I understand this is a guidance tool and not a substitute for legal advice. I confirm the information provided is accurate to the best of my knowledge.
+    </label>
+
+    <button type="submit">Submit My Information</button>
+  </form>
+
+  <div class="output" id="advice"></div>
+
+  <script>
+    document.getElementById('intakeForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const form = e.target;
+      const formData = new FormData(form);
+      const entries = [...formData.entries()].map(([key, value]) => \`\${key.replace(/_/g, ' ')}: \${value}\`);
+      const summary = entries.join("\n");
+
+      const outputDiv = document.getElementById('advice');
+      outputDiv.textContent = 'Generating advice... please wait...';
+
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer YOUR_API_KEY_HERE`
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content: `You are an English family law solicitor. You provide neutral, reliable guidance to people who are separating or divorcing and cannot afford full legal representation. Based only on the information provided, give a realistic summary of what a court would likely decide in terms of:
+
+- Dividing property, savings, pensions and debts  
+- Living arrangements for any children  
+- Child maintenance or spousal support
+
+Assume both parties are acting in good faith. Make clear that:
+- This advice cannot resolve factual disputes
+- It is based solely on the information provided
+- If any information is inaccurate or incomplete, the advice may not be reliable
+
+Where there is not enough detail to be certain, say so. Explain things clearly and avoid legal jargon.
+
+At the end, include practical recommendations for next steps, such as:
+- Attending mediation  
+- Seeking solicitor review  
+- Gathering further financial disclosure if needed
+
+Please keep the entire response under 1000 words.`
+              },
+              { role: "user", content: summary }
+            ],
+            temperature: 0.4
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.choices && data.choices.length > 0) {
+          outputDiv.textContent = data.choices[0].message.content;
+        } else {
+          outputDiv.textContent = "Error: Could not generate advice. Please try again later.";
+        }
+      } catch (error) {
+        outputDiv.textContent = "Error: Unable to connect to the AI. Please check your internet or API key.";
+      }
+    });
+  </script>
+</body>
+</html>
